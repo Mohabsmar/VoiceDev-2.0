@@ -148,7 +148,7 @@ const PREBUILT_COLLECTIONS = [
 
 import {
   FileEdit, Copy, FolderInput, PenLine, Hash, Monitor, Pointer, Camera,
-  Terminal, Code, Braces, Key, List, Activity,
+  Terminal, Code, Braces, Key, List as ListIcon, Activity,
   Globe, Send, Scissors,
   Regex, CheckCircle,
   GitBranch as GitBranchIcon, GitCommit, GitMerge as GitMergeIcon, GitCompare,
@@ -3046,7 +3046,7 @@ export default function MarketplacePage() {
                           className="h-9 w-9 cursor-pointer"
                           onClick={toggleMode}
                         >
-                          {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                          {viewMode === 'grid' ? <ListIcon className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>{viewMode === 'grid' ? 'List View' : 'Grid View'}</TooltipContent>
