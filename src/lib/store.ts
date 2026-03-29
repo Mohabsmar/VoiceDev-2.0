@@ -4,7 +4,16 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppSettings, VoiceDevStore, ChatSession, Message } from './types';
+import type {
+  AppSettings,
+  VoiceDevStore,
+  ChatSession,
+  Message,
+  NotificationPreferences,
+  PrivacySettings,
+  PerformanceSettings,
+  UsageStats,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Default Settings
@@ -23,6 +32,32 @@ const defaultSettings: AppSettings = {
   codeTheme: 'vs2015',
 };
 
+const defaultNotifications: NotificationPreferences = {
+  messageComplete: true,
+  errors: true,
+  sound: false,
+  desktop: false,
+};
+
+const defaultPrivacy: PrivacySettings = {
+  clearOnExit: false,
+  anonymousUsage: true,
+  dataRetention: 90,
+};
+
+const defaultPerformance: PerformanceSettings = {
+  animations: true,
+  particles: true,
+  messageLoadLimit: 100,
+  lazyLoading: true,
+};
+
+const defaultUsage: UsageStats = {
+  totalCalls: 0,
+  totalTokens: 0,
+  providerBreakdown: {},
+};
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -30,6 +65,7 @@ const defaultSettings: AppSettings = {
 export const useVoiceDevStore = create<VoiceDevStore>()(
   persist(
     (set, get) => ({
+      // ── Core State ──
       currentTab: 'landing' as const,
       chatSessions: [],
       currentSessionId: null,
@@ -41,6 +77,86 @@ export const useVoiceDevStore = create<VoiceDevStore>()(
       userName: '',
       isStreaming: false,
 
+      // ── Message Reactions ──
+      messageReactions: {},
+
+      // ── Message Bookmarks ──
+      bookmarkedMessages: [],
+
+      // ── Chat Folders ──
+      chatFolders: [],
+
+      // ── Marketplace Collections ──
+      collections: [],
+
+      // ── Item Ratings ──
+      itemRatings: {},
+
+      // ── Item Reviews ──
+      itemReviews: {},
+
+      // ── Favorites ──
+      favoriteModels: [],
+      favoriteItems: [],
+
+      // ── Recently Viewed ──
+      recentlyViewed: [],
+
+      // ── Search History ──
+      searchHistory: [],
+
+      // ── Custom Model Aliases ──
+      modelAliases: {},
+
+      // ── Custom Model Tags ──
+      modelTags: {},
+
+      // ── Custom CSS ──
+      customCSS: '',
+
+      // ── System Prompt Library ──
+      promptLibrary: [],
+
+      // ── Chat Background ──
+      chatBackground: '',
+
+      // ── Notification Preferences ──
+      notifications: defaultNotifications,
+
+      // ── Privacy Settings ──
+      privacy: defaultPrivacy,
+
+      // ── Performance Settings ──
+      performance: defaultPerformance,
+
+      // ── Usage Stats ──
+      usageStats: defaultUsage,
+
+      // ── Backup ──
+      lastBackup: 0,
+      autoBackupInterval: 5,
+
+      // ── View Preferences ──
+      marketplaceView: 'grid' as const,
+
+      // ── Keyboard Shortcuts Customization ──
+      customShortcuts: {},
+
+      // ── Sidebar Collapsed ──
+      sidebarCollapsed: false,
+
+      // ── Nav Tab Order ──
+      navTabOrder: ['landing', 'chat', 'marketplace', 'providers', 'settings'],
+
+      // ── Language ──
+      language: 'en',
+
+      // ── Loading Complete ──
+      loadingComplete: false,
+
+      // ===================================================================
+      // Core Actions
+      // ===================================================================
       setCurrentTab: (tab) => set({ currentTab: tab }),
 
       createSession: (provider = 'openai', model = 'gpt-4o') => {
@@ -139,6 +255,16 @@ export const useVoiceDevStore = create<VoiceDevStore>()(
             installedItems: state.installedItems,
             userName: state.userName,
             setupComplete: state.setupComplete,
+            favoriteModels: state.favoriteModels,
+            modelAliases: state.modelAliases,
+            modelTags: state.modelTags,
+            customCSS: state.customCSS,
+            promptLibrary: state.promptLibrary,
+            chatBackground: state.chatBackground,
+            notifications: state.notifications,
+            privacy: state.privacy,
+            performance: state.performance,
+            usageStats: state.usageStats,
           },
           null,
           2
@@ -155,6 +281,16 @@ export const useVoiceDevStore = create<VoiceDevStore>()(
             installedItems: data.installedItems || [],
             userName: data.userName || '',
             setupComplete: data.setupComplete || false,
+            favoriteModels: data.favoriteModels || [],
+            modelAliases: data.modelAliases || {},
+            modelTags: data.modelTags || {},
+            customCSS: data.customCSS || '',
+            promptLibrary: data.promptLibrary || [],
+            chatBackground: data.chatBackground || '',
+            notifications: { ...defaultNotifications, ...data.notifications },
+            privacy: { ...defaultPrivacy, ...data.privacy },
+            performance: { ...defaultPerformance, ...data.performance },
+            usageStats: { ...defaultUsage, ...data.usageStats },
           });
           return true;
         } catch {
@@ -171,7 +307,246 @@ export const useVoiceDevStore = create<VoiceDevStore>()(
           installedItems: [],
           setupComplete: false,
           userName: '',
+          favoriteModels: [],
+          modelAliases: {},
+          modelTags: {},
+          customCSS: '',
+          promptLibrary: [],
+          chatBackground: '',
+          notifications: defaultNotifications,
+          privacy: defaultPrivacy,
+          performance: defaultPerformance,
+          usageStats: defaultUsage,
         }),
+
+      // ===================================================================
+      // Reactions & Bookmarks
+      // ===================================================================
+      toggleReaction: (messageId, emoji) =>
+        set((state) => {
+          const msgReactions = { ...state.messageReactions };
+          const current = msgReactions[messageId] || {};
+          const count = (current[emoji] || 0);
+          if (count > 0) {
+            if (count === 1) {
+              delete current[emoji];
+            } else {
+              current[emoji] = count - 1;
+            }
+          } else {
+            current[emoji] = 1;
+          }
+          msgReactions[messageId] = current;
+          return { messageReactions: msgReactions };
+        }),
+
+      toggleBookmark: (messageId) =>
+        set((state) => ({
+          bookmarkedMessages: state.bookmarkedMessages.includes(messageId)
+            ? state.bookmarkedMessages.filter((id) => id !== messageId)
+            : [...state.bookmarkedMessages, messageId],
+        })),
+
+      // ===================================================================
+      // Chat Folders
+      // ===================================================================
+      createFolder: (name, color) =>
+        set((state) => ({
+          chatFolders: [
+            ...state.chatFolders,
+            { id: `folder-${Date.now()}`, name, sessionIds: [], color },
+          ],
+        })),
+
+      deleteFolder: (id) =>
+        set((state) => ({
+          chatFolders: state.chatFolders.filter((f) => f.id !== id),
+        })),
+
+      moveSessionToFolder: (sessionId, folderId) =>
+        set((state) => ({
+          chatFolders: state.chatFolders.map((f) =>
+            f.id === folderId
+              ? { ...f, sessionIds: f.sessionIds.includes(sessionId) ? f.sessionIds : [...f.sessionIds, sessionId] }
+              : { ...f, sessionIds: f.sessionIds.filter((sid) => sid !== sessionId) }
+          ),
+        })),
+
+      // ===================================================================
+      // Collections
+      // ===================================================================
+      createCollection: (name) =>
+        set((state) => ({
+          collections: [
+            ...state.collections,
+            { id: `coll-${Date.now()}`, name, itemIds: [] },
+          ],
+        })),
+
+      addToCollection: (collectionId, itemId) =>
+        set((state) => ({
+          collections: state.collections.map((c) =>
+            c.id === collectionId && !c.itemIds.includes(itemId)
+              ? { ...c, itemIds: [...c.itemIds, itemId] }
+              : c
+          ),
+        })),
+
+      removeFromCollection: (collectionId, itemId) =>
+        set((state) => ({
+          collections: state.collections.map((c) =>
+            c.id === collectionId
+              ? { ...c, itemIds: c.itemIds.filter((id) => id !== itemId) }
+              : c
+          ),
+        })),
+
+      // ===================================================================
+      // Ratings & Reviews
+      // ===================================================================
+      rateItem: (itemId, rating) =>
+        set((state) => ({
+          itemRatings: { ...state.itemRatings, [itemId]: rating },
+        })),
+
+      addReview: (itemId, text) =>
+        set((state) => ({
+          itemReviews: {
+            ...state.itemReviews,
+            [itemId]: [
+              ...(state.itemReviews[itemId] || []),
+              { text, author: state.userName || 'Anonymous', date: Date.now() },
+            ],
+          },
+        })),
+
+      // ===================================================================
+      // Favorites
+      // ===================================================================
+      toggleFavoriteModel: (modelId) =>
+        set((state) => ({
+          favoriteModels: state.favoriteModels.includes(modelId)
+            ? state.favoriteModels.filter((id) => id !== modelId)
+            : [...state.favoriteModels, modelId],
+        })),
+
+      toggleFavoriteItem: (itemId) =>
+        set((state) => ({
+          favoriteItems: state.favoriteItems.includes(itemId)
+            ? state.favoriteItems.filter((id) => id !== itemId)
+            : [...state.favoriteItems, itemId],
+        })),
+
+      // ===================================================================
+      // Recently Viewed & Search
+      // ===================================================================
+      addRecentlyViewed: (item) =>
+        set((state) => ({
+          recentlyViewed: [
+            item,
+            ...state.recentlyViewed.filter((rv) => rv.id !== item.id),
+          ].slice(0, 20),
+        })),
+
+      addSearchHistory: (query) =>
+        set((state) => ({
+          searchHistory: [query, ...state.searchHistory.filter((q) => q !== query)].slice(0, 10),
+        })),
+
+      clearSearchHistory: () => set({ searchHistory: [] }),
+
+      // ===================================================================
+      // Model Aliases & Tags
+      // ===================================================================
+      setModelAlias: (alias, providerModel) =>
+        set((state) => ({
+          modelAliases: { ...state.modelAliases, [alias]: providerModel },
+        })),
+
+      addModelTag: (modelId, tag) =>
+        set((state) => {
+          const current = state.modelTags[modelId] || [];
+          if (current.includes(tag)) return state;
+          return {
+            modelTags: { ...state.modelTags, [modelId]: [...current, tag] },
+          };
+        }),
+
+      removeModelTag: (modelId, tag) =>
+        set((state) => ({
+          modelTags: {
+            ...state.modelTags,
+            [modelId]: (state.modelTags[modelId] || []).filter((t) => t !== tag),
+          },
+        })),
+
+      // ===================================================================
+      // Customization
+      // ===================================================================
+      setCustomCSS: (css) => set({ customCSS: css }),
+
+      savePromptToLibrary: (prompt) =>
+        set((state) => ({
+          promptLibrary: [
+            ...state.promptLibrary,
+            { ...prompt, id: `prompt-${Date.now()}` },
+          ],
+        })),
+
+      deletePromptFromLibrary: (id) =>
+        set((state) => ({
+          promptLibrary: state.promptLibrary.filter((p) => p.id !== id),
+        })),
+
+      setChatBackground: (bg) => set({ chatBackground: bg }),
+
+      // ===================================================================
+      // Settings
+      // ===================================================================
+      updateNotificationSettings: (partial) =>
+        set((state) => ({
+          notifications: { ...state.notifications, ...partial },
+        })),
+
+      updatePrivacySettings: (partial) =>
+        set((state) => ({
+          privacy: { ...state.privacy, ...partial },
+        })),
+
+      updatePerformanceSettings: (partial) =>
+        set((state) => ({
+          performance: { ...state.performance, ...partial },
+        })),
+
+      // ===================================================================
+      // Usage & Backup
+      // ===================================================================
+      recordUsage: (providerId, tokens) =>
+        set((state) => ({
+          usageStats: {
+            totalCalls: state.usageStats.totalCalls + 1,
+            totalTokens: state.usageStats.totalTokens + tokens,
+            providerBreakdown: {
+              ...state.usageStats.providerBreakdown,
+              [providerId]: (state.usageStats.providerBreakdown[providerId] || 0) + tokens,
+            },
+          },
+        })),
+
+      triggerBackup: () => set({ lastBackup: Date.now() }),
+
+      // ===================================================================
+      // View & Navigation
+      // ===================================================================
+      setMarketplaceView: (view) => set({ marketplaceView: view }),
+      setCustomShortcut: (action, key) =>
+        set((state) => ({
+          customShortcuts: { ...state.customShortcuts, [action]: key },
+        })),
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setNavTabOrder: (order) => set({ navTabOrder: order }),
+      setLanguage: (lang) => set({ language: lang }),
+      setLoadingComplete: (complete) => set({ loadingComplete: complete }),
     }),
     {
       name: 'voicedev-storage',
